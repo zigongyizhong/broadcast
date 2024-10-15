@@ -60,13 +60,14 @@ class DownloadThread(QThread):
                         guid_match = re.search(guid_pattern, script.string)
                         if guid_match:
                             guid = guid_match.group(1)
-                            m3u8_url = f"https://{self.cdnurl}/asp/hls/2000/0303000a/3/default/{guid}/2000.m3u8"
+                            m3u8_url = f"https://{self.cdnurl}/asp//hls/2000/0303000a/3/default/{guid}/2000.m3u8"
+                            # m3u8_url = f"https://{self.cdnurl}/asp/hls/2000/0303000a/3/default/{guid}/2000.m3u8"
                             return guid, m3u8_url
 
                 video_center_id_match = re.search(video_center_id_pattern, response.text)
                 if video_center_id_match:
                     video_center_id = video_center_id_match.group(1)
-                    m3u8_url = f"https://{self.cdnurl}/asp/hls/2000/0303000a/3/default/{video_center_id}/2000.m3u8"
+                    m3u8_url = f"https://{self.cdnurl}/asp//hls/2000/0303000a/3/default/{video_center_id}/2000.m3u8"
                     return video_center_id, m3u8_url
 
             return None, None
@@ -77,39 +78,52 @@ class DownloadThread(QThread):
     def download_and_process_m3u8(self, guid, m3u8_url, current_video, total_videos):
         base_dir = os.path.join(os.getcwd(), datetime.now().strftime("%Y-%m-%d"))
         os.makedirs(base_dir, exist_ok=True)
-        temp_dir = os.path.join(base_dir, 'cctv_temp')
-        os.makedirs(temp_dir, exist_ok=True)
+        output_file = os.path.join(base_dir, f"{guid}.mp4")
+
+        ffmpeg_command = [ffmpeg_path, "-i", m3u8_url, "-c", "copy", output_file,"-y"]
 
         try:
-            m3u8_response = requests.get(m3u8_url)
-            m3u8_content = m3u8_response.text
+            # 将 stderr 输出重定向到 PIPE
+            process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
-            ts_urls = [line.strip() for line in m3u8_content.split('\n') if line.strip().endswith('.ts')]
+            duration_regex = re.compile(r"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})")
+            time_regex = re.compile(r"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})")
+            duration = None
 
-            for i, ts_url in enumerate(ts_urls):
-                full_url = urljoin(m3u8_url, ts_url)
-                ts_response = requests.get(full_url)
-                ts_file_path = os.path.join(temp_dir, f"{i}.ts")
-                with open(ts_file_path, 'wb') as f:
-                    f.write(ts_response.content)
-                self.progress_update.emit(current_video, total_videos, i + 1, len(ts_urls))
+            stdout, stderr = process.communicate()
+            
+            # 收集完整的输出
+            full_output = stdout + stderr
 
-            output_file = os.path.join(base_dir, f"{guid}.mp4")
-            with open(os.path.join(temp_dir, 'file_list.txt'), 'w') as f:
-                for i in range(len(ts_urls)):
-                    f.write(f"file '{i}.ts'\n")
+            if not duration:
+                match = duration_regex.search(full_output)
+                if match:
+                    duration = self.time_to_seconds(match.groups())
 
-            ffmpeg_command = [ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', os.path.join(temp_dir, 'file_list.txt'), '-c', 'copy', output_file]
-            subprocess.run(ffmpeg_command, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            for line in full_output.splitlines():
+                match = time_regex.search(line)
+                if match and duration:
+                    current_time = self.time_to_seconds(match.groups())
+                    progress = int((current_time / duration) * 100)
+                    self.progress_update.emit(current_video, total_videos, progress, 100)
 
-            self.download_complete.emit(output_file)
+            if process.returncode == 0:
+                self.download_complete.emit(output_file)
+            else:
+                error_message = f"下载失败: FFmpeg 进程返回错误码 {process.returncode}\n"
+                error_message += f"命令: {' '.join(ffmpeg_command)}\n"
+                error_message += f"输出:\n{full_output}"
+                self.error_occurred.emit(error_message)
 
-        except subprocess.CalledProcessError as e:
-            self.error_occurred.emit(f"FFmpeg 执行错误: {e}")
         except Exception as e:
-            self.error_occurred.emit(f"发生错误: {e}")
-        finally:
-            shutil.rmtree(temp_dir)
+            error_message = f"下载过程中发生错误: {str(e)}\n"
+            error_message += f"命令: {' '.join(ffmpeg_command)}\n"
+            error_message += f"异常详情: {full_output}"
+            self.error_occurred.emit(error_message)
+
+    def time_to_seconds(self, time_tuple):
+        hours, minutes, seconds = map(float, time_tuple)
+        return hours * 3600 + minutes * 60 + seconds
 
 class MergeThread(QThread):
     progress_update = pyqtSignal(int, int, str)
@@ -320,9 +334,9 @@ class DownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.cdn_urls = {
-            "3rd华为": "hls.cntv.myhwcdn.cn",
-            "3rd网宿": "vod.cntv.lxdns.com",
-            "3rd网宿海外（超清，需代理hls.cntv.cdn20.com）": "hls.cntv.cdn20.com"
+            "网宿": "dh5.cntv.lxdns.com",
+            "华为":"dh5.cntv.myhwcdn.cn",
+            "阿里": "dh5.cntv.myalicdn.com"
         }
         self.initUI()
 
