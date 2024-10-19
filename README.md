@@ -1,10 +1,10 @@
-## 自贡一中放送系统
-一个可以从 CCTV Web 下载**最高画质**视频，添加台标、片头、片尾，并且转换为 MPG/AVI 格式的工具。
+## 自贡一中新闻采集系统
+一个可以从各类网站下载**最高画质**视频，添加台标、片头、片尾，并且转换为 MPG/AVI 格式的工具。
 
 ### 配置开发环境
 安装所需的第三方库
 ```
-pip install requests bs4 psutil PyQt5
+pip install requests bs4 psutil PyQt5 yt_dlp
 ```
 
 若在中国大陆地区连接速度较慢，可使用国内的镜像源
