@@ -473,7 +473,13 @@ class DownloaderGUI(QWidget):
         self.setGeometry(x, y, width, height)
 
     def openProgramDirectory(self):
-        program_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, 'frozen', False):
+            # 如果是打包后的 exe
+            program_dir = os.path.dirname(sys.executable)
+        else:
+            # 如果是在开发环境中
+            program_dir = os.path.dirname(os.path.abspath(__file__))
+    
         if sys.platform == 'win32':
             os.startfile(program_dir)
         elif sys.platform == 'darwin':
