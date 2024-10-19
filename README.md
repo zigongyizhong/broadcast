@@ -9,7 +9,7 @@ pip install requests bs4 psutil PyQt5 yt_dlp
 
 若在中国大陆地区连接速度较慢，可使用国内的镜像源
 ```
-pip install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple requests bs4 psutil PyQt5
+pip install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple requests bs4 psutil PyQt5 yt_dlp
 ```
 
 此外，需要您手动下载[FFmpeg](https://www.ffmpeg.org/)，并将`ffmpeg.exe`和`ffprobe.exe`置于`ffmpeg`文件夹内
