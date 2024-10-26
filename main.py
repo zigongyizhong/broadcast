@@ -24,8 +24,8 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-ffmpeg_path = resource_path("ffmpeg/ffmpeg")
-ffprobe_path = resource_path("ffmpeg/ffprobe")
+ffmpeg_path = resource_path("ffmpeg/ffmpeg.exe")
+ffprobe_path = resource_path("ffmpeg/ffprobe.exe")
 logo_path = resource_path("assets/logo.png")
 intro_path = resource_path("assets/intro.mp4")
 outro_path = resource_path("assets/outro.mp4")
@@ -64,6 +64,7 @@ class DownloadThread(QThread):
             'format': 'bestvideo+bestaudio/best',
             'outtmpl': os.path.join(base_dir, '%(title)s.%(ext)s'),
             'merge_output_format': 'mp4',
+            'ffmpeg_location':ffmpeg_path,
             'progress_hooks': [lambda d: self.ytdlp_progress_hook(d, current_video, total_videos)],
         }
 
@@ -421,9 +422,8 @@ class DownloaderGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.cdn_urls = {
-            "网宿": "dh5.cntv.lxdns.com",
-            "华为":"dh5.cntv.myhwcdn.cn",
-            "阿里": "dh5.cntv.myalicdn.com"
+            "CCTV HLS_NAP (中国大陆,高清)":"hlssnap.video.cctv.com",
+            "网宿国际 (海外,需代理hls.cntv.cdn20.com)":"hls.cntv.cdn20.com"
         }
         self.initUI()
 
